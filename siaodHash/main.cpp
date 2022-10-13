@@ -10,12 +10,18 @@ struct Product {
 	string name;
 	int code;
 	Product* next;
+	int file_position;
 
-	Product(string name, int code) {
+	Product(string name, int code, int file_position) {
 		this->code = code;
 		this->name = name;
 		this->next = nullptr;
+		this->file_position = file_position;
 	}
+
+	void setFilePosition(int file_position) {
+		this->file_position = file_position;
+	 }
 };
 
 struct list {
@@ -31,8 +37,8 @@ struct list {
 		return first == nullptr;
 	}
 
-	void push_back(string name, int code) { // добавление узла в список
-		Product* obj = new Product(name, code);
+	void push_back(string name, int code, int file_position) { // добавление узла в список
+		Product* obj = new Product(name, code, file_position);
 		if (is_empty()) {
 			first = obj;
 			last = obj;
@@ -45,7 +51,7 @@ struct list {
 	void print() { // печать списка
 		Product* p = first;
 		while (p) {
-			cout << p->name << setw(40 - p->name.size()) << p->code << "\n";
+			cout << p->name << setw(40 - p->name.size()) << p->code << setw(40) << p->file_position << "\n";
 			p = p->next;
 		}
 	}
@@ -90,24 +96,14 @@ struct list {
 		delete second;
 	}
 
-	void addInFile(){ // перезапись файла без удалённого ключа
-		fstream file("products.txt", ios::out);
+	int search(int code) { // поиск по ключу
 		Product* p = first;
 		while (p) {
-			file << p->name << ", " << p->code << "\n";
+			if (p->code = code) {
+				return p->file_position;
+			}
 			p = p->next;
 		}
-		file.close();
-	}
-
-	void addInFile(int count) { // дозапись файла без удалённого ключа
-		fstream file("products.txt", ios::app);
-		Product* p = first;
-		while (p) {
-			file << p->name << ", " << p->code << "\n";
-			p = p->next;
-		}
-		file.close();
 	}
 };
 
@@ -130,13 +126,13 @@ void getNameAndCode(string& name, string& n, string line) { // получение имени т
 	}
 }
 
-void addInHashTable(list* hashTable[10], string name, int code) { // добавление ключа в хеш-таблицу
+void addInHashTable(list* hashTable[10], string name, int code, int file_position) { // добавление ключа в хеш-таблицу
 	if (hashTable[hashF(code)]) {
-		hashTable[hashF(code)]->push_back(name, code);
+		hashTable[hashF(code)]->push_back(name, code, file_position);
 	}
 	else {
 		hashTable[hashF(code)] = new list();
-		hashTable[hashF(code)]->push_back(name, code);
+		hashTable[hashF(code)]->push_back(name, code, file_position);
 	}
 }
 
@@ -152,25 +148,26 @@ int main() {
 	for (int i = 0; i < 10; i++) {
 		hashTable[i] = nullptr;
 	}
-	string line, name = "", n = ""; int code;
+	string line, name = "", n = ""; int code, file_position;
 	ifstream file("products.txt");
 	if (file.is_open()) {
 		while (!file.eof()) {
+			file_position = file.tellg();
 			getline(file, line);
 			getNameAndCode(name, n, line);
 			n.erase(0, 1);
 			try {
 				code = stoi(n);
-				addInHashTable(hashTable, name, code);
+				addInHashTable(hashTable, name, code, file_position);
 			}
 			catch (...) {}
 			name = ""; n = "";
 		}
 	}
 	file.close();
-	int command = 0, count = 0;
-	while (command != 4) {
-		cout << "1 - Вывод таблицы\n" << "2 - Вставить ключ в таблицу\n" << "3 - Удалить ключ из таблицы\n" << "4 - Завершить работу\n";
+	int command = 0;
+	while (command != 5) {
+		cout << "1 - Вывод таблицы\n" << "2 - Вставить ключ в таблицу\n" << "3 - Удалить ключ из таблицы\n" << "4 - Поиск по ключу\n" << "5 - Завершить работу\n";
 		cin >> command;
 		switch (command) {
 		case(1):
@@ -184,31 +181,37 @@ int main() {
 		case(2):
 			cout << "Введите имя и код товара.\n";
 			cin >> name >> code;
-			addInHashTable(hashTable, name, code);
+			addInHashTable(hashTable, name, code, file_position);
 			addInFile(name, code);
 			break;
 		case(3):
+		{
 			cout << "Введите код товара для удаления.\n";
 			cin >> code;
+			hashTable[hashF(code)]->remove(code);
+			ofstream file("products.txt");
 			for (int i = 0; i < 10; i++) {
-				if (hashF(code) == i) {
-					hashTable[i]->remove(code);
-					break;
+				if (hashTable[i]) {
+					Product* p = hashTable[i]->first;
+					while (p) {
+						int file_position = file.tellp();
+						p->setFilePosition(file_position);
+						file << p->name << ", " << p->code << "\n";
+						p = p->next;
+					}
 				}
 			}
-			for (int i = 0; i < 10; i++) {
-				if (hashTable[i] && count == 0) {
-					hashTable[i]->addInFile();
-					count++;
-				}
-				else if (hashTable[i]) {
-					hashTable[i]->addInFile(count);
-				}
-			}
-			count = 0;
+			file.close();
 			break;
+		}
 		case(4):
+		{
+			cout << "Введите ключ для поиска.\n";
+			cin >> code;
+			int position = hashTable[hashF(code)]->search(code);
+			cout << "Ключ находится на " << position << " бите в файле.\n";
 			break;
+		}
 		default:
 			break;
 		}
