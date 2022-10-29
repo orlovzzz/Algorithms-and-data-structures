@@ -1,0 +1,3 @@
+﻿  main.cpp
+D:\с++\siaodHash\siaodTree\main.cpp(82,15): warning C4244: аргумент: преобразование "time_t" в "unsigned int", возможна потеря данных
+  siaodTree.vcxproj -> D:\с++\siaodHash\siaodTree\x64\Debug\siaodTree.exe
